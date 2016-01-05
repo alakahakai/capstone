@@ -1,8 +1,8 @@
 # R script file for word prediction
 
-unigram <- readRDS("../data/unigram.RDS")
-bigram <- readRDS("../data/bigram.RDS")
-trigram <- readRDS("../data/trigram.RDS")
+unigram <- readRDS("data/unigram.RDS")
+bigram <- readRDS("data/bigram.RDS")
+trigram <- readRDS("data/trigram.RDS")
 
 lastWord <- function(s) {
   print(s)
