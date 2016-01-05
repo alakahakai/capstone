@@ -1,4 +1,5 @@
 # R script file for word prediction
+library(tm)
 
 unigram <- readRDS("data/unigram.RDS")
 bigram <- readRDS("data/bigram.RDS")
