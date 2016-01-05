@@ -11,7 +11,7 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       sliderInput("num.predictions", label = h5("Number of Predictions"),
-                  min = 1, max = 10, step = 1, value = 5),
+                  min = 1, max = 10, step = 1, value = 1),
       textInput("words", label = h3("Text input"),
                 value = ""),
       textOutput("echo"),
