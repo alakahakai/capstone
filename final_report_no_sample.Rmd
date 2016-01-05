@@ -1,0 +1,195 @@
+---
+title: "Exploratory Analysis of the Capstone Dataset - No Sampling"
+subtitle: "Generating data for final app"
+author: "Ray Qiu"
+date: "December 29, 2015"
+output: html_document
+---
+
+#### Introduction
+This document is the Milestone Report for the Data Science Capstone project.  The goal of the capstone project is to create a predictive model by using a large text corpus of documents as training data, then use the model to predict the upcoming word based on preceding input.  Some relevant Natural Language Processing (NLP) techniques will be used to perform the analysis and build the predictive model.
+
+This milestone report gives some views of the major features of the corpus data with our exploratory data analysis, and describes the plan for creating the predictive model.
+
+##### Load all required libraries
+```{r message=FALSE}
+library(tm)
+library(dplyr)
+library(stringi)
+library(ggplot2)
+library(RWeka)
+library(wordcloud)
+library(rJava)
+
+# Set JVM parameters
+.jinit(parameters="-Xmx8g")
+```
+
+#### Data preprocessing and Analysis
+
+##### Getting the dataset
+
+The dataset zip file can be downloaded from the following URL: 
+  https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip.
+
+```{r}
+setwd("/Users/ray/workspace/datascience/capstone")
+if (!file.exists("Coursera-SwiftKey.zip")) {
+  download.file("https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip")
+  unzip("Coursera-SwiftKey.zip")
+}
+```
+
+##### Load the data into R
+
+```{r}
+blogs <- readLines("final/en_US/en_US.blogs.txt", encoding = "UTF-8", skipNul = TRUE)
+news <- readLines("final/en_US/en_US.news.txt", encoding = "UTF-8", skipNul = TRUE)
+twitter <- readLines("final/en_US/en_US.twitter.txt", encoding = "UTF-8", skipNul = TRUE)
+```
+
+##### Get some basic information about the dataset
+
+```{r}
+# Count the number of characters of each word in the document
+blogs.words <- stri_count_words(blogs)
+news.words <- stri_count_words(news)
+twitter.words <- stri_count_words(twitter)
+# Generate a summary data frame
+summaryDF <- data.frame(name = c("blogs", "news", "twitter"), 
+                        number.lines = c(length(blogs.words), 
+                                         length(news.words), 
+                                         length(twitter.words)),
+                        words.max = c(max(blogs.words),
+                                      max(news.words),
+                                      max(twitter.words)),
+                        words.min = c(min(blogs.words),
+                                      min(news.words),
+                                      min(twitter.words)),
+                        words.mean = c(mean(blogs.words),
+                                       mean(news.words),
+                                       mean(twitter.words)))
+summaryDF
+```
+
+##### Take sample data from the dataset, 2% sampling rate
+
+```{r}
+set.seed(68879)
+sampleRate <- 0.02
+blogs.sample <- paste(sample(blogs, length(blogs) * sampleRate), collapse = "")
+news.sample <- paste(sample(news, length(news) * sampleRate), collapse = "")
+twitter.sample <- paste(sample(twitter, length(twitter) * sampleRate), collapse = "")
+
+# Read in all documents in the working dorectory
+docs <- Corpus(VectorSource(c(blogs.sample, news.sample, twitter.sample)))
+inspect(docs)
+```
+
+##### Perform some data cleaning, then create Corpus and Term Document Matrix (TDM) 
+
+``` {r}
+
+docs <- docs %>% 
+
+  # Remove all punctuation
+  tm_map(removePunctuation) %>% 
+  
+  # Remove all numbers 
+  tm_map(removeNumbers) %>% 
+  
+  # Convert all words to lower case
+  tm_map(content_transformer(tolower)) %>%
+  
+  # Remove English stopwords
+  tm_map(removeWords, stopwords("english")) %>%
+  
+  # Remove extra whitespaces
+  tm_map(stripWhitespace) %>%
+
+  # Now, treat the preprocessed documents as text documents
+  tm_map(PlainTextDocument)
+
+saveRDS(docs, file = "docs.RDS")
+
+# Somehow multicore is giving problems for ngrams, set the number of cores to 1
+options(mc.cores=1)
+
+BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=2, max=2))
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=3, max=3))
+
+# Then, create a Term Document Matrix (TDM) for the sample data which reflects the number of times each word in the corpus is found in each of the sampled documents.  Do so for unigram, bigram, and trigram.
+tdm <- TermDocumentMatrix(docs)
+tdm <- removeSparseTerms(tdm, .5)
+tdm2 <- TermDocumentMatrix(docs, control=list(tokenize=BigramTokenizer))
+tdm2 <- removeSparseTerms(tdm2, .5)
+tdm3 <- TermDocumentMatrix(docs, control=list(tokenize=TrigramTokenizer))
+tdm3 <- removeSparseTerms(tdm3, .5)
+
+saveRDS(tdm, file = "data/tdm.RDS")
+saveRDS(tdm2, file = "data/tdm2.RDS")
+saveRDS(tdm3, file = "data/tdm3.RDS")
+```
+
+##### Build some plots and display wordcloud
+```{r warning=FALSE}
+freq <- sort(rowSums(as.matrix(tdm)), decreasing=TRUE)
+freqDF <- data.frame(name = names(freq), freq = freq, row.names = NULL, 
+                      stringsAsFactors = FALSE)
+freqDF_top20 <- head(freqDF, 20)
+
+# Plot words in frequency order
+ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF_top20) + 
+  geom_histogram(stat = "identity") +
+  labs(y="Frequency", title="Top 20 Unigrams in samples") +
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
+# Display wordcloud
+wordcloud(names(freq), freq, min.freq=100, max.words=100,
+          scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
+
+freq2 <- sort(rowSums(as.matrix(tdm2)), decreasing=TRUE)
+freqDF2 <- data.frame(name = names(freq2), freq = freq2, row.names = NULL, 
+                      stringsAsFactors = FALSE)
+freqDF2_top20 <- head(freqDF2, 20)
+
+# Plot words in frequency order
+ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF2_top20) + 
+  geom_histogram(stat = "identity") +
+  labs(y="Frequency", title="Top 20 Bigrams in samples") +
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
+# Display wordcloud
+wordcloud(names(freq2), freq2, min.freq=100, max.words=100,
+          scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
+
+freq3 <- sort(rowSums(as.matrix(tdm3)), decreasing=TRUE)
+freqDF3 <- data.frame(name = names(freq3), freq = freq3, row.names = NULL, 
+                      stringsAsFactors = FALSE)
+freqDF3_top20 <- head(freqDF3, 20)
+
+# Plot words in frequency order
+ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF3_top20) + 
+  geom_histogram(stat = "identity") +
+  labs(y="Frequency", title="Top 20 Trigrams in samples") +
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
+# Display wordcloud
+wordcloud(names(freq3), freq3, min.freq=100, max.words=100, 
+          scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
+
+saveRDS(freqDF, file = "data/unigram.RDS")
+saveRDS(freqDF2, file = "data/bigram.RDS")
+saveRDS(freqDF3, file = "data/trigram.RDS")
+```
+
+#### Prediction Algorithm And Shiny App
+The next steps of this capstone project is to finalize our predictive algorithm, and deploy as a Shiny app.
+
+Our predictive algorithm will use the n-gram model with frequency, as showed above.  One simple strategy would be as the follows: 
+  * The first word prediction will use the unigram model with character matching
+  * As more words are inputed, we switch to bigram, trigram, quadgram accordingly.  
+  * If no match is found, we drop the leading word, then run the process again.
+
+The user interface of the Shiny app will provide a text input box for users to input a phrase. Then the app will use our algorithm to suggest the most likely next word after a short delay.  The application will suggest top 5 words by default.
+
