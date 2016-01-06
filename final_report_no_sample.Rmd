@@ -117,6 +117,7 @@ options(mc.cores=1)
 
 BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=2, max=2))
 TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=3, max=3))
+QuadgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=4, max=4))
 
 # Then, create a Term Document Matrix (TDM) for the sample data which reflects the number of times each word in the corpus is found in each of the sampled documents.  Do so for unigram, bigram, and trigram.
 tdm <- TermDocumentMatrix(docs)
@@ -125,10 +126,13 @@ tdm2 <- TermDocumentMatrix(docs, control=list(tokenize=BigramTokenizer))
 tdm2 <- removeSparseTerms(tdm2, .5)
 tdm3 <- TermDocumentMatrix(docs, control=list(tokenize=TrigramTokenizer))
 tdm3 <- removeSparseTerms(tdm3, .5)
+tdm4 <- TermDocumentMatrix(docs, control=list(tokenize=QuadgramTokenizer))
+tdm4 <- removeSparseTerms(tdm4, .5)
 
-saveRDS(tdm, file = "data/tdm.RDS")
-saveRDS(tdm2, file = "data/tdm2.RDS")
-saveRDS(tdm3, file = "data/tdm3.RDS")
+saveRDS(tdm, file = "tdm.RDS")
+saveRDS(tdm2, file = "tdm2.RDS")
+saveRDS(tdm3, file = "tdm3.RDS")
+saveRDS(tdm4, file = "tdm4.RDS")
 ```
 
 ##### Build some plots and display wordcloud
@@ -178,9 +182,25 @@ ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF3_top2
 wordcloud(names(freq3), freq3, min.freq=100, max.words=100, 
           scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
 
-saveRDS(freqDF, file = "data/unigram.RDS")
-saveRDS(freqDF2, file = "data/bigram.RDS")
-saveRDS(freqDF3, file = "data/trigram.RDS")
+freq4 <- sort(rowSums(as.matrix(tdm4)), decreasing=TRUE)
+freqDF4 <- data.frame(name = names(freq4), freq = freq4, row.names = NULL, 
+                      stringsAsFactors = FALSE)
+freqDF4_top20 <- head(freqDF4, 20)
+
+# Plot words in frequency order
+ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF4_top20) + 
+  geom_histogram(stat = "identity") +
+  labs(y="Frequency", title="Top 20 Trigrams in samples") +
+  theme(axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
+# Display wordcloud
+wordcloud(names(freq4), freq4, min.freq=100, max.words=100, 
+          scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
+
+saveRDS(freqDF, file = "app/data/unigram.RDS")
+saveRDS(freqDF2, file = "app/data/bigram.RDS")
+saveRDS(freqDF3, file = "app/data/trigram.RDS")
+saveRDS(freqDF4, file = "app/data/quadgram.RDS")
 ```
 
 #### Prediction Algorithm And Shiny App

@@ -17,7 +17,7 @@ combineWords <- function(words) {
 
 searchNgram <- function(w, d, num.predictions) {
   search.string <- paste0(w, collapse = " ")
-  results <- grep(paste0(search.string, "\\s", collapse = ""), d$name,
+  results <- grep(paste0("^", search.string, "\\s", collapse = ""), d$name,
                   ignore.case = TRUE, value = TRUE)
   if (length(results) > 0) {
     return(lastWord(head(results, num.predictions)))
