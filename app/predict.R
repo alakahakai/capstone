@@ -4,10 +4,11 @@ library(tm)
 unigram <- readRDS("data/unigram.RDS")
 bigram <- readRDS("data/bigram.RDS")
 trigram <- readRDS("data/trigram.RDS")
+quadgram <- readRDS("data/quadgram.RDS")
 
 lastWord <- function(s) {
   words <- strsplit(s, "\\s+")
-  return(sapply(words, function(l) tail(l, 1)))
+  sapply(words, function(l) tail(l, 1))
 }
 
 combineWords <- function(words) {
@@ -21,43 +22,61 @@ searchNgram <- function(w, d, num.predictions) {
   if (length(results) > 0) {
     return(lastWord(head(results, num.predictions)))
   } else {
-    return(NULL)
+    NULL
+  }
+}
+
+processSingle <- function(w, n) {
+  bigram.results <- searchNgram(w, bigram, n)
+  if (length(bigram.results) == n) {
+    bigram.results
+  } else if (length(bigram.results) < n) {
+    # Fill up with unigram results
+    c(bigram.results, head(unigram$name, n - length(bigram.results)))
+  } else {
+    head(bigram.results, n)
+  }
+}
+
+processDouble <- function(w, n) {
+  trigram.results <- searchNgram(w, trigram, n)
+  if (length(trigram.results) == n) {
+    trigram.results
+  } else if (length(trigram.results) < n) {
+    # Combined trigram and bigram predictions, with trigram ones at the top
+    c(trigram.results, processSingle(tail(w, 1), n - length(trigram.results)))
+  } else {
+    head(trigram.results, n)
+  }
+}
+
+processTriple <- function(w, n) {
+  quadgram.results <- searchNgram(w, quadgram, n)
+  if (length(quadgram.results) == n) {
+    quadgram.results
+  } else if (length(quadgram.results) < n) {
+    # Combined quadgram and trigram predictions, with quadgram ones at the top
+    c(quadgram.results, processDouble(tail(w, 2), n - length(quadgram.results)))
+  } else {
+    head(quadgram.results, n)
   }
 }
 
 predictWord <- function(text, num.predictions) {
-  words <- removePunctuation(strsplit(text, "\\s+")[[1]])
-  unigram.results <- head(unigram$name, num.predictions)
-  # If no input, use the unigram predictions
+  words <- text %>%
+           strsplit("\\s+") %>%
+           unlist %>%
+           removePunctuation %>%
+           tolower %>%
+           removeNumbers
+  # If no input, return unigram results
   if (length(words) == 0) {
-    return(combineWords(unigram.results))
+    head(unigram$name, num.predictions)
+  } else if (length(words) == 1) {
+    combineWords(processSingle(words, num.predictions))
+  } else if (length(words) == 2) {
+    combineWords(processDouble(tail(words, 2), num.predictions))
   } else {
-    # Get bigram predictions
-    bigram.results <- searchNgram(tail(words, 1), bigram, num.predictions)
-    if (length(words) < 2) {
-      if (length(bigram.results) < num.predictions) {
-        # Add unigram results, up to num.predictions
-        return(combineWords(head(c(bigram.results, unigram.results), num.predictions)))
-      } else {
-        return(combineWords(bigram.results))
-      }
-    } else {
-      # Keep the last two words for search, because we only support up to trigram
-      words <- tail(words, 2)
-      # Search on trigram
-      trigram.results <- searchNgram(words, trigram, num.predictions)
-      if (length(trigram.results) < num.predictions) {
-        # Combined trigram and bigram predictions, with trigram ones at the top
-        tribi.results <- union(trigram.results, bigram.results)
-        if (length(tribi.results) < num.predictions) {
-          # Add unigram results
-          return(combineWords(c(tribi.results, unigram.results)))
-        } else {
-          return(combineWords(tribi.results))
-        }
-      } else {
-        return(combineWords(trigram.results))
-      }
-    }
+    combineWords(processTriple(tail(words, 3), num.predictions))
   }
 }

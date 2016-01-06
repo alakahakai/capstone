@@ -102,7 +102,7 @@ docs <- docs %>%
   tm_map(content_transformer(tolower)) %>%
   
   # Remove English stopwords
-  tm_map(removeWords, stopwords("english")) %>%
+  #tm_map(removeWords, stopwords("english")) %>%
   
   # Remove extra whitespaces
   tm_map(stripWhitespace) %>%
@@ -121,13 +121,13 @@ QuadgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=4, max=4))
 
 # Then, create a Term Document Matrix (TDM) for the sample data which reflects the number of times each word in the corpus is found in each of the sampled documents.  Do so for unigram, bigram, and trigram.
 tdm <- TermDocumentMatrix(docs)
-tdm <- removeSparseTerms(tdm, .5)
+#tdm <- removeSparseTerms(tdm, .5)
 tdm2 <- TermDocumentMatrix(docs, control=list(tokenize=BigramTokenizer))
-tdm2 <- removeSparseTerms(tdm2, .5)
+#tdm2 <- removeSparseTerms(tdm2, .5)
 tdm3 <- TermDocumentMatrix(docs, control=list(tokenize=TrigramTokenizer))
-tdm3 <- removeSparseTerms(tdm3, .5)
+#tdm3 <- removeSparseTerms(tdm3, .5)
 tdm4 <- TermDocumentMatrix(docs, control=list(tokenize=QuadgramTokenizer))
-tdm4 <- removeSparseTerms(tdm4, .5)
+#tdm4 <- removeSparseTerms(tdm4, .5)
 
 saveRDS(tdm, file = "tdm.RDS")
 saveRDS(tdm2, file = "tdm2.RDS")
@@ -149,8 +149,8 @@ ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF_top20
   theme(axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
 # Display wordcloud
-wordcloud(names(freq), freq, min.freq=100, max.words=100,
-          scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
+wordcloud(names(freq), freq, max.words=100,
+          scale=c(2,.5), colors=brewer.pal(8, "Dark2"))
 
 freq2 <- sort(rowSums(as.matrix(tdm2)), decreasing=TRUE)
 freqDF2 <- data.frame(name = names(freq2), freq = freq2, row.names = NULL, 
@@ -164,7 +164,7 @@ ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF2_top2
   theme(axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
 # Display wordcloud
-wordcloud(names(freq2), freq2, min.freq=100, max.words=100,
+wordcloud(names(freq2), freq2, max.words=100,
           scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
 
 freq3 <- sort(rowSums(as.matrix(tdm3)), decreasing=TRUE)
@@ -179,7 +179,7 @@ ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF3_top2
   theme(axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
 # Display wordcloud
-wordcloud(names(freq3), freq3, min.freq=100, max.words=100, 
+wordcloud(names(freq3), freq3, max.words=100, 
           scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
 
 freq4 <- sort(rowSums(as.matrix(tdm4)), decreasing=TRUE)
@@ -190,11 +190,11 @@ freqDF4_top20 <- head(freqDF4, 20)
 # Plot words in frequency order
 ggplot(aes(x = reorder(name, -freq), y = freq, fill = freq), data = freqDF4_top20) + 
   geom_histogram(stat = "identity") +
-  labs(y="Frequency", title="Top 20 Trigrams in samples") +
+  labs(y="Frequency", title="Top 20 Quadgrams in samples") +
   theme(axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 60, size = 8, hjust = 1))
 # Display wordcloud
-wordcloud(names(freq4), freq4, min.freq=100, max.words=100, 
+wordcloud(names(freq4), freq4, max.words=50, 
           scale=c(2,.25), colors=brewer.pal(8, "Dark2"))
 
 saveRDS(freqDF, file = "app/data/unigram.RDS")
