@@ -6,7 +6,6 @@ bigram <- readRDS("data/bigram.RDS")
 trigram <- readRDS("data/trigram.RDS")
 
 lastWord <- function(s) {
-  print(s)
   words <- strsplit(s, "\\s+")
   return(sapply(words, function(l) tail(l, 1)))
 }
