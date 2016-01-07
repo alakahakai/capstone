@@ -72,11 +72,11 @@ summaryDF <- data.frame(name = c("blogs", "news", "twitter"),
 summaryDF
 ```
 
-##### Take sample data from the dataset, 2% sampling rate
+##### Take sample data from the dataset, 5% sampling rate
 
 ```{r}
 set.seed(68879)
-sampleRate <- 0.02
+sampleRate <- .05
 blogs.sample <- paste(sample(blogs, length(blogs) * sampleRate), collapse = "")
 news.sample <- paste(sample(news, length(news) * sampleRate), collapse = "")
 twitter.sample <- paste(sample(twitter, length(twitter) * sampleRate), collapse = "")

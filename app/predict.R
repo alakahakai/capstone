@@ -1,5 +1,6 @@
 # R script file for word prediction
 library(tm)
+library(dplyr)
 
 unigram <- readRDS("data/unigram.RDS")
 bigram <- readRDS("data/bigram.RDS")
@@ -17,8 +18,8 @@ combineWords <- function(words) {
 
 searchNgram <- function(w, d, num.predictions) {
   search.string <- paste0(w, collapse = " ")
-  results <- grep(paste0("^", search.string, "\\s", collapse = ""), d$name,
-                  ignore.case = TRUE, value = TRUE)
+  results <- grep(paste0("^", search.string, " ", collapse = ""), d$name,
+                  perl = TRUE, value = TRUE)
   if (length(results) > 0) {
     return(lastWord(head(results, num.predictions)))
   } else {
@@ -71,7 +72,7 @@ predictWord <- function(text, num.predictions) {
            removeNumbers
   # If no input, return unigram results
   if (length(words) == 0) {
-    head(unigram$name, num.predictions)
+    combineWords(head(unigram$name, num.predictions))
   } else if (length(words) == 1) {
     combineWords(processSingle(words, num.predictions))
   } else if (length(words) == 2) {

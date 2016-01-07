@@ -2,7 +2,9 @@
 title: "Data Science Capstone Project"
 author: "Ray Qiu <ray.qiu@gmail.com>"
 date: "January 5, 2016"
-output: slidy_presentation
+output: 
+  slidy_presentation: 
+    keep_md: yes
 subtitle: Next Word Prediction
 ---
 
@@ -11,6 +13,8 @@ subtitle: Next Word Prediction
 - My App is about predicting the next word based on an input phrase
 - Dataset is based on the provided SwiftKey dataset
 - Algorithm is about using **pre-computed ngrams** to predict next word of a phrase
+- **pre-computed ngrams** includes unigram, bigram, trigram, and quadgram
+- One thing to note: Although generally **removing stopwords** is a good idea for text mining, I found that it is **not suitable** for *ngram generation*
 - Developed using RStudio Shiny
 - Published to shinyapps.io
 
@@ -27,7 +31,7 @@ subtitle: Next Word Prediction
 - Echo the input to UI after removing whitespaces
 - Load the ngram data (sorted in frequency descending order)
 - The prediction algorithm works as follows:
-```
+```{r}
 predictWord <- function(text, num.predictions) {
   words <- text %>%
            strsplit("\\s+") %>%
